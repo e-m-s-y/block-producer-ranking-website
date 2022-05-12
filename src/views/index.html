@@ -218,7 +218,7 @@
         '#607D8B',
     ];
 
-    axios.get('http://159.203.4.245:6003/api/delegates/ranking')
+    axios.get('/api/delegates/ranking')
         .then(function (response) {
             for (const round of response.data.data) {
                 config.data.labels.unshift(round.round);
@@ -254,6 +254,8 @@
             }
 
             chart = new Chart(document.getElementById('canvas'), config);
+
+            document.getElementById('chart').classList.remove('d-none');
         })
         .catch(function (error) {
             document.getElementById('error').getElementsByTagName("p")[0].innerHTML = error.message;
@@ -261,7 +263,6 @@
         })
         .then(function () {
             document.getElementById('loader').classList.add('d-none');
-            document.getElementById('chart').classList.remove('d-none');
         });
 </script>
 <script>
