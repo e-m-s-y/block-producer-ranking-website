@@ -127,7 +127,7 @@
                                 const differenceInRanks = tooltipItem.raw.y - previousTooltipItem.y;
 
                                 if (differenceInRanks !== 0) {
-                                    const prefix = differenceInRanks < 0 ? '-' : '+';
+                                    const prefix = differenceInRanks < 0 ? '+' : '-';
 
                                     rank += ' (' + prefix + Math.abs(differenceInRanks) + ')';
                                 }
@@ -249,7 +249,7 @@
                     fill: false,
                     borderColor: color,
                     backgroundColor: color,
-                    tension: 0.1
+                    tension: 0.3
                 });
             }
 
