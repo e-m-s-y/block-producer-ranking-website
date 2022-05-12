@@ -1,0 +1,10 @@
+{
+    "apps": [
+        {
+            "name": "delegate-ranking-website",
+            "script": "src/index.js",
+            "log_date_format" : "YYYY-MM-DD HH:mm:ss Z",
+            "watch": false
+        }
+    ]
+}

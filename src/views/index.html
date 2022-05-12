@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" content="text/html">
+    <title>Helios delegate ranking</title>
+    <meta name="emsy" content="author">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
+    <link href="/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+</head>
+<body class="bg-dark">
+<div>
+    <div class="container">
+        <div id="loader" class="row justify-content-center align-items-center mw-100 vh-100 m-0">
+            <div class="d-flex align-items-start flex-column">
+                <div class="d-flex col-12 justify-content-center">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                </div>
+                <div class="d-flex col-12 justify-content-center">
+                    <p class="pt-2 m-0 text-light">Loading...</p>
+                </div>
+            </div>
+        </div>
+        <div id="error" class="row justify-content-center align-items-center mw-100 vh-100 m-0 d-none">
+            <div class="d-flex align-items-start flex-column">
+                <div class="d-flex col-12 justify-content-center">
+                    <p class="pt-2 m-0 text-light">Error</p>
+                </div>
+            </div>
+        </div>
+        <div id="chart" class="row justify-content-center d-none">
+            <div class="col-12 pt-3">
+                <h3 class="text-center text-light">Delegate ranking</h3>
+                <p id="countdown" class="text-center text-light m-0">Refreshing automatically in 64 seconds...</p>
+            </div>
+            <div class="d-flex col-12 justify-content-end p-1">
+                <label>
+                    <input id="toggleMode" type="checkbox" onchange="toggleMode(this)" checked>
+                    <small class="text-light">Toggle dark / light mode</small>
+                </label>
+            </div>
+            <div class="position-relative p-0" style="height: 90vh; width: 100vw;">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/js/axios.min.js"></script>
+<script src="/js/chart.min.js"></script>
+<script src="/js/jquery.min.js"></script>
+<script>
+    function toggleMode(checkbox) {
+        $(checkbox.checked ? '.bg-light' : '.bg-dark').toggleClass('bg-light bg-dark');
+        $(checkbox.checked ? '.text-dark' : '.text-light').toggleClass('text-dark text-light');
+
+        if (chart) {
+            const color = checkbox.checked ? 'white' : 'black';
+            const gridColor = checkbox.checked ? 'rgb(255, 255, 255, 0.5)' : 'rgb(0, 0, 0, 0.5)';
+
+            chart.config.options.scales.x.grid.borderColor = color;
+            chart.config.options.scales.x.ticks.color = color;
+            chart.config.options.scales.x.title.color = color;
+            chart.config.options.scales.y.grid.borderColor = color;
+            chart.config.options.scales.y.ticks.color = color;
+            chart.config.options.scales.y.title.color = color;
+            chart.config.options.scales.x.grid.color = gridColor;
+            chart.config.options.scales.y.grid.color = gridColor;
+        }
+
+        chart.update();
+
+        try {
+            localStorage.setItem('lightmode', !checkbox.checked);
+        } catch (error) {
+            console.log('No localstorage available.');
+        }
+    }
+
+    try {
+        if (localStorage.getItem('lightmode') === "true") {
+            toggleMode($('#toggleMode').prop('checked', false));
+        }
+    } catch (error) {}
+</script>
+<script>
+    let color = 'white';
+    let gridColor = 'rgb(255, 255, 255, 0.5)';
+
+    try {
+        if (localStorage.getItem('lightmode') === "true") {
+            color = 'black';
+            gridColor = 'rgb(0, 0, 0, 0.5)';
+        }
+    } catch (error) {}
+
+    const config = {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'nearest',
+                axis: 'xy',
+            },
+            plugins: {
+                legend: {
+                    display: false,
+                    position: 'top'
+                },
+                title: {
+                    display: false,
+                    text: 'Delegate rank history'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(tooltipItem) {
+                            const label = tooltipItem.dataset.label || '';
+                            const previousTooltipItem = config.data.datasets[tooltipItem.datasetIndex].data[tooltipItem.dataIndex - 1] || undefined;
+                            let votes = tooltipItem.raw.votes;
+                            let rank = tooltipItem.raw.y;
+
+                            if (previousTooltipItem !== undefined) {
+                                const differenceInRanks = tooltipItem.raw.y - previousTooltipItem.y;
+
+                                if (differenceInRanks !== 0) {
+                                    const prefix = differenceInRanks < 0 ? '-' : '+';
+
+                                    rank += ' (' + prefix + Math.abs(differenceInRanks) + ')';
+                                }
+
+                                const differenceInVotes = tooltipItem.raw.votes - previousTooltipItem.votes;
+
+                                if (differenceInVotes !== 0) {
+                                    const prefix = differenceInVotes < 0 ? '-' : '+';
+
+                                    votes += ' (' + prefix + Math.abs(differenceInVotes) + ')';
+                                }
+                            }
+
+                            return [label, 'Rank: ' + rank, 'Votes: ' + votes, ''];
+                        },
+                        title: function(tooltipItems) {
+                            return 'Round ' + tooltipItems[0].label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Round',
+                        color: color,
+                    },
+                    ticks: {
+                        callback: function(value, index, ticks) {
+                            let suffix = '';
+
+                            if (ticks.length -1 === index) {
+                                suffix = ' (latest)'
+                            }
+
+                            return this.getLabelForValue(value) + suffix;
+                        },
+                        color: color,
+                    },
+                    grid: {
+                        borderColor: color,
+                        color: gridColor,
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Rank',
+                        color: color,
+                    },
+                    reverse: true,
+                    ticks: {
+                        stepSize: 1,
+                        beginAtZero: false,
+                        color: color,
+                    },
+                    grid: {
+                        borderColor: color,
+                        color: gridColor,
+                    }
+                }
+            }
+        }
+    };
+</script>
+<script>
+    let chart;
+    const colors = [
+        '#F44336',
+        '#E91E63',
+        '#9C27B0',
+        '#673AB7',
+        '#3F51B5',
+        '#2196F3',
+        '#03A9F4',
+        '#00BCD4',
+        '#009688',
+        '#4CAF50',
+        '#8BC34A',
+        '#CDDC39',
+        '#FFEB3B',
+        '#FFC107',
+        '#FF9800',
+        '#FF5722',
+        '#795548',
+        '#9E9E9E',
+        '#607D8B',
+    ];
+
+    axios.get('https://api.heliosblockchain.io/api/delegates/ranking')
+        .then(function (response) {
+            for (const round of response.data.data) {
+                config.data.labels.unshift(round.round);
+            }
+
+            const history = new Map();
+
+            for (const round of response.data.data) {
+                for (const delegate of round.delegates) {
+                    const rounds = history.get(delegate.username) || [];
+
+                    rounds.unshift({
+                        x: parseInt(round.round),
+                        y: delegate.rank,
+                        votes: parseInt(delegate.votes.slice(0, delegate.votes.length - 8)),
+                    });
+
+                    history.set(delegate.username, rounds);
+                }
+            }
+
+            for (const [delegate, rounds] of history) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                config.data.datasets.push({
+                    label: delegate,
+                    data: rounds,
+                    fill: false,
+                    borderColor: color,
+                    backgroundColor: color,
+                    tension: 0.1
+                });
+            }
+
+            chart = new Chart(document.getElementById('canvas'), config);
+        })
+        .catch(function (error) {
+            document.getElementById('error').getElementsByTagName("p")[0].innerHTML = error.message;
+            document.getElementById('error').classList.remove('d-none');
+        })
+        .then(function () {
+            document.getElementById('loader').classList.add('d-none');
+            document.getElementById('chart').classList.remove('d-none');
+        });
+</script>
+<script>
+    (function countdown(remaining) {
+        if (remaining === 0) {
+            window.location.reload();
+        }
+
+        let text = `Refreshing automatically in ${remaining} seconds...`;
+
+        if (remaining === 1) {
+            text = `Refreshing automatically in ${remaining} second...`;
+        }
+
+        document.getElementById('countdown').innerHTML = text;
+
+        setTimeout(function () {
+            countdown(remaining - 1);
+        }, 1000);
+    })(64);
+</script>
+</body>
+</html>
