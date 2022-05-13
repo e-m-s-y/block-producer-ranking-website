@@ -234,6 +234,16 @@
 </script>
 <script>
     let chart;
+    const caches = {
+        default: {
+            labels: [],
+            datasets: [],
+        },
+        small: {
+            labels: [],
+            datasets: [],
+        }
+    };
     const colors = [
         '#F44336',
         '#E91E63',
@@ -259,7 +269,11 @@
     axios.get('/api/delegates/ranking')
         .then(function (response) {
             for (const round of response.data.data) {
-                config.data.labels.unshift(round.round);
+                caches.default.labels.unshift(round.round);
+
+                if (caches.small.labels.length !== 5) {
+                    caches.small.labels.unshift(round.round);
+                }
             }
 
             const history = new Map();
@@ -271,7 +285,7 @@
                     rounds.unshift({
                         x: parseInt(round.round),
                         y: delegate.rank,
-                        votes: parseInt(delegate.votes.slice(0, delegate.votes.length - 8)),
+                        votes: parseInt(delegate.votes.slice(0, delegate.votes.length - 8))
                     });
 
                     history.set(delegate.username, rounds);
@@ -281,7 +295,7 @@
             for (const [delegate, rounds] of history) {
                 const color = colors[Math.floor(Math.random() * colors.length)];
 
-                config.data.datasets.push({
+                caches.default.datasets.push({
                     label: delegate,
                     data: rounds,
                     fill: false,
@@ -289,7 +303,20 @@
                     backgroundColor: color,
                     tension: 0.2
                 });
+                caches.small.datasets.push({
+                    label: delegate,
+                    data: rounds.slice(0, 5),
+                    fill: false,
+                    borderColor: color,
+                    backgroundColor: color,
+                    tension: 0.2
+                });
             }
+
+            const width = $(window).width();
+
+            config.data.datasets = width < 768 ? caches.small.datasets : caches.default.datasets;
+            config.data.labels = width < 768 ? caches.small.labels : caches.default.labels;
 
             chart = new Chart(document.getElementById('canvas'), config);
 
@@ -325,10 +352,23 @@
 <script>
     window.addEventListener('resize', function() {
         if (chart) {
-            const viewLegend = $(window).width() >= 992;
+            const width = $(window).width();
+            const viewLegend = width >= 992;
 
             if (chart.config.options.plugins.legend.display !== viewLegend) {
                 chart.config.options.plugins.legend.display = viewLegend;
+
+                chart.update();
+            }
+
+            if (width < 768 && chart.config.data.labels.length !== caches.small.labels.length) {
+                chart.config.data.datasets = caches.small.datasets;
+                chart.config.data.labels = caches.small.labels;
+
+                chart.update();
+            } else if(width > 768 && chart.config.data.labels.length !== caches.default.labels.length) {
+                chart.config.data.datasets = caches.default.datasets;
+                chart.config.data.labels = caches.default.labels;
 
                 chart.update();
             }
