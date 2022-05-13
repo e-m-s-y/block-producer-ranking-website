@@ -126,8 +126,28 @@
                     display: $(window).width() >= 992,
                     position: 'top',
                     labels: {
+                        filter: function(legendItem) {
+                            legendItem.text += ' ↗';
+
+                            return legendItem;
+                        },
                         color: color,
                     },
+                    onClick: function (event, legendItem) {
+                        const delegate = config.data.datasets[legendItem.datasetIndex].label;
+
+                        window.open(`https://delegates.solar.org/delegates/${delegate}`, '_blank');
+                    },
+                    onHover: function(event) {
+                        const target = event.native ? event.native.target : event.target;
+
+                        target.style.cursor = 'pointer';
+                    },
+                    onLeave: function(event) {
+                        const target = event.native ? event.native.target : event.target;
+
+                        target.style.cursor = 'default';
+                    }
                 },
                 title: {
                     display: false,
