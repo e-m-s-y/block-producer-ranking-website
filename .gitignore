@@ -65,3 +65,4 @@ typings/
 
 # Mac devices
 .idea
+.DS_Store
