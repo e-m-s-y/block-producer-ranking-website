@@ -56,14 +56,12 @@
             const color = checkbox.checked ? 'white' : 'black';
             const gridColor = checkbox.checked ? 'rgb(255, 255, 255, 0.5)' : 'rgb(0, 0, 0, 0.5)';
 
-            chart.config.options.scales.x.grid.borderColor = color;
-            chart.config.options.scales.x.ticks.color = color;
-            chart.config.options.scales.x.title.color = color;
-            chart.config.options.scales.y.grid.borderColor = color;
-            chart.config.options.scales.y.ticks.color = color;
-            chart.config.options.scales.y.title.color = color;
-            chart.config.options.scales.x.grid.color = gridColor;
-            chart.config.options.scales.y.grid.color = gridColor;
+            for (const index in chart.config.options.scales) {
+                chart.config.options.scales[index].grid.color = gridColor;
+                chart.config.options.scales[index].grid.borderColor = color;
+                chart.config.options.scales[index].ticks.color = color;
+                chart.config.options.scales[index].title.color = color;
+            }
         }
 
         chart.update();
@@ -91,6 +89,16 @@
             gridColor = 'rgb(0, 0, 0, 0.5)';
         }
     } catch (error) {}
+
+    const roundTickFormatter = function(value, index, ticks) {
+        let suffix = '';
+
+        if (ticks.length -1 === index) {
+            suffix = ' (latest)'
+        }
+
+        return this.getLabelForValue(value) + suffix;
+    };
 
     const config = {
         type: 'line',
@@ -157,21 +165,25 @@
                         color: color,
                     },
                     ticks: {
-                        callback: function(value, index, ticks) {
-                            let suffix = '';
-
-                            if (ticks.length -1 === index) {
-                                suffix = ' (latest)'
-                            }
-
-                            return this.getLabelForValue(value) + suffix;
-                        },
+                        callback: roundTickFormatter,
                         color: color,
                     },
                     grid: {
                         borderColor: color,
                         color: gridColor,
                     }
+                },
+                x2: {
+                    position: 'top',
+                    title: {
+                        display: true,
+                        text: 'Round',
+                        color: color,
+                    },
+                    ticks: {
+                        callback: roundTickFormatter,
+                        color: color,
+                    },
                 },
                 y: {
                     title: {
@@ -189,6 +201,22 @@
                         borderColor: color,
                         color: gridColor,
                     }
+                },
+                y2: {
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Rank',
+                        color: color,
+                    },
+                    reverse: true,
+                    ticks: {
+                        stepSize: 1,
+                        beginAtZero: false,
+                        color: color,
+                    },
+                    min: 1,
+                    max: 53,
                 }
             }
         }
@@ -242,15 +270,21 @@
 
             for (const [delegate, rounds] of history) {
                 const color = colors[Math.floor(Math.random() * colors.length)];
-
-                config.data.datasets.push({
+                const dataset = {
                     label: delegate,
                     data: rounds,
                     fill: false,
                     borderColor: color,
                     backgroundColor: color,
                     tension: 0.2
-                });
+                };
+
+                config.data.datasets.push(dataset);
+
+                // dataset.yAxisID = 'yRight';
+
+                // config.data.datasets.push(dataset);
+
             }
 
             chart = new Chart(document.getElementById('canvas'), config);
