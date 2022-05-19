@@ -156,13 +156,11 @@
                     position: 'right',
                     maxWidth: 500,
                     labels: {
-                        filter: function(legendItem) {
-                            legendItem.text += ' ↗';
-
-                            return legendItem;
-                        },
                         color: color,
                     },
+                    onClick:  function (e) {
+                        e.stopPropagation();
+                    }
                 },
                 title: {
                     display: false,
