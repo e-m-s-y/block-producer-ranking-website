@@ -2,14 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" content="text/html">
-    <title>Helios delegate ranking</title>
+    <title>Solar delegate ranking</title>
     <meta name="emsy" content="author">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
-    <link href="/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/select2.min.css" rel="stylesheet">
+    <script src="/js/axios.min.js"></script>
+    <script src="/js/chart.min.js"></script>
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/select2.min.js"></script>
+    <style>
+        .select2-selection {
+            min-height: 38px !important;
+            max-height: 76px !important;
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+
+        .select2-search__field {
+            line-height: normal;
+            margin-top: 10px !important;
+        }
+
+        .select2-selection--single {
+            overflow: hidden;
+            text-overflow: ellipse;
+        }
+    </style>
 </head>
 <body class="bg-dark">
 <div>
-    <div class="container justify-content-center">
+    <div class="container-fluid justify-content-center">
         <div id="loader" class="row justify-content-center align-items-center mw-100 vh-100 m-0">
             <div class="d-flex align-items-start flex-column">
                 <div class="d-flex col-12 justify-content-center">
@@ -27,31 +50,36 @@
                 </div>
             </div>
         </div>
-        <div id="chart" class="row justify-content-center d-none">
+        <div id="chart" class="row p-2 justify-content-center d-none">
             <div class="col-12 pt-3">
-                <h3 class="text-center text-light">Helios delegate ranking</h3>
+                <h3 class="text-center text-light">Solar delegate ranking</h3>
                 <p id="countdown" class="text-center text-light m-0">Refreshing automatically in 64 seconds...</p>
             </div>
-            <div class="d-flex col-12 justify-content-end p-1">
-                <label>
-                    <input id="toggleMode" type="checkbox" onchange="toggleMode(this)" checked>
-                    <small class="text-light">Toggle dark / light mode</small>
-                </label>
+            <div class="d-flex row justify-content-center p-1">
+                <div class="col-12 pb-3 pt-1">
+                    <label class="float-end">
+                        <input id="toggleMode" type="checkbox" onchange="toggleMode(this)" checked>
+                        <small class="text-light">Toggle dark / light mode</small>
+                    </label>
+                </div>
+                <div class="col-12 col-xl-8 col-xxl-6 pb-2">
+                    <label class="col-12">
+                        <select id="delegates-filter" multiple style="width: 100%">
+                        </select>
+                    </label>
+                </div>
             </div>
 <!--            <div style="width: 100%; overflow-x: auto; overflow-y: hidden">-->
 <!--                <div style="height: 85vh; width: 100vw;">-->
 <!--                    <canvas id="canvas"></canvas>-->
 <!--                </div>-->
 <!--            </div>-->
-            <div class="position-relative p-0" style="height: 85vh; width: 100vw;">
+            <div class="position-relative p-0" style="height: 80vh; width: 100vw;">
                 <canvas id="canvas"></canvas>
             </div>
         </div>
     </div>
 </div>
-<script src="/js/axios.min.js"></script>
-<script src="/js/chart.min.js"></script>
-<script src="/js/jquery.min.js"></script>
 <script>
     function toggleMode(checkbox) {
         $(checkbox.checked ? '.bg-light' : '.bg-dark').toggleClass('bg-light bg-dark');
@@ -124,10 +152,32 @@
             plugins: {
                 legend: {
                     display: $(window).width() >= 992,
-                    position: 'top',
+                    align: 'start',
+                    position: 'right',
+                    maxWidth: 500,
                     labels: {
+                        filter: function(legendItem) {
+                            legendItem.text += ' ↗';
+
+                            return legendItem;
+                        },
                         color: color,
                     },
+                    onClick: function (event, legendItem) {
+                        const delegate = config.data.datasets[legendItem.datasetIndex].label;
+
+                        window.open(`https://delegates.solar.org/delegates/${delegate}`, '_blank');
+                    },
+                    onHover: function(event) {
+                        const target = event.native ? event.native.target : event.target;
+
+                        target.style.cursor = 'pointer';
+                    },
+                    onLeave: function(event) {
+                        const target = event.native ? event.native.target : event.target;
+
+                        target.style.cursor = 'default';
+                    }
                 },
                 title: {
                     display: false,
@@ -210,7 +260,9 @@
                     grid: {
                         borderColor: color,
                         color: gridColor,
-                    }
+                    },
+                    min: 1,
+                    max: 53,
                 },
                 y2: {
                     position: 'right',
@@ -221,6 +273,15 @@
                     },
                     reverse: true,
                     ticks: {
+                        callback: function(value, index) {
+                            let suffix = '';
+
+                            if ( ! config.data.datasets[53 - index - 1].hidden && $(window).width() >= 992) {
+                                suffix = config.data.datasets[53 - index - 1].label;
+                            }
+
+                            return this.getLabelForValue(value) + ` ${suffix}`;
+                        },
                         stepSize: 1,
                         beginAtZero: false,
                         color: color,
@@ -265,6 +326,20 @@
         '#9E9E9E',
         '#607D8B',
     ];
+
+    const applyDelegatesFilter = function(datasets) {
+        let selectedDelegates = [];
+
+        try {
+            selectedDelegates = JSON.parse(localStorage.getItem('selected-delegates')) || [];
+        } catch (error) {}
+
+        for (const dataset of datasets) {
+            dataset.hidden = !selectedDelegates.includes(dataset.label) && selectedDelegates.length;
+        }
+
+        return datasets;
+    }
 
     axios.get('/api/delegates/ranking')
         .then(function (response) {
@@ -318,6 +393,59 @@
             config.data.datasets = width < 768 ? caches.small.datasets : caches.default.datasets;
             config.data.labels = width < 768 ? caches.small.labels : caches.default.labels;
 
+            // TODO cleanup
+            $("#delegates-filter").on('select2:unselect', function (event) {
+                var $el = $(this)
+                setTimeout(function () {
+                    $('.select2-search__field', $el.closest('.form-row')).focus();
+                    $el.select2('open');
+                    $('.select2-search__field', $el.closest('.form-row')).val('');
+                }, 0)
+            });
+            $("#delegates-filter").on('select2:select', function (event) {
+                var $el = $(this);
+                $el.select2('open');
+                setTimeout(function () {
+                    $('.select2-search__field', $el.closest('.form-row')).focus();
+                });
+            });
+
+            const filterData = [];
+            let selectedDelegates = [];
+
+            try {
+                selectedDelegates = JSON.parse(localStorage.getItem('selected-delegates')) || [];
+            } catch (error) {}
+
+            for (const dataset of config.data.datasets) {
+                filterData.push({
+                    id: dataset.label,
+                    text: dataset.label,
+                    selected: selectedDelegates.includes(dataset.label),
+                });
+            }
+
+            $('#delegates-filter').select2({
+                placeholder: "Filter delegate(s)",
+                allowClear: true,
+                data: filterData,
+                closeOnSelect: false,
+            });
+
+            $('#delegates-filter').on('change.select2', function () {
+                const selectedDelegates = $(this).val();
+
+                try {
+                    localStorage.setItem('selected-delegates', JSON.stringify(selectedDelegates));
+                } catch (error) {}
+
+                applyDelegatesFilter(config.data.datasets);
+
+                chart.update();
+            });
+
+            applyDelegatesFilter(config.data.datasets);
+
             chart = new Chart(document.getElementById('canvas'), config);
 
             document.getElementById('chart').classList.remove('d-none');
@@ -353,7 +481,7 @@
     window.addEventListener('resize', function() {
         if (chart) {
             const width = $(window).width();
-            const viewLegend = width >= 992;
+            const viewLegend = width >= 1200;
 
             if (chart.config.options.plugins.legend.display !== viewLegend) {
                 chart.config.options.plugins.legend.display = viewLegend;
@@ -362,12 +490,12 @@
             }
 
             if (width < 768 && chart.config.data.labels.length !== caches.small.labels.length) {
-                chart.config.data.datasets = caches.small.datasets;
+                chart.config.data.datasets = applyDelegatesFilter(caches.small.datasets);
                 chart.config.data.labels = caches.small.labels;
 
                 chart.update();
             } else if(width > 768 && chart.config.data.labels.length !== caches.default.labels.length) {
-                chart.config.data.datasets = caches.default.datasets;
+                chart.config.data.datasets = applyDelegatesFilter(caches.default.datasets);
                 chart.config.data.labels = caches.default.labels;
 
                 chart.update();
