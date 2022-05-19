@@ -241,6 +241,9 @@
                     },
                     reverse: true,
                     ticks: {
+                        callback: function(value, index) {
+                            return this.getLabelForValue(value) + ` ${config.data.datasets[53 - index - 1].label}`;
+                        },
                         stepSize: 1,
                         beginAtZero: false,
                         color: color,
