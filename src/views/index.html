@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" content="text/html">
-    <title>Solar delegate ranking</title>
+    <title>Helios delegate ranking</title>
     <meta name="emsy" content="author">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
     <link href="/css/bootstrap.min.css" rel="stylesheet">
@@ -52,7 +52,7 @@
         </div>
         <div id="chart" class="row p-2 justify-content-center d-none">
             <div class="col-12 pt-3">
-                <h3 class="text-center text-light">Solar delegate ranking</h3>
+                <h3 class="text-center text-light">Helios delegate ranking</h3>
                 <p id="countdown" class="text-center text-light m-0">Refreshing automatically in 64 seconds...</p>
             </div>
             <div class="d-flex row justify-content-center p-1">
@@ -163,21 +163,6 @@
                         },
                         color: color,
                     },
-                    onClick: function (event, legendItem) {
-                        const delegate = config.data.datasets[legendItem.datasetIndex].label;
-
-                        window.open(`https://delegates.solar.org/delegates/${delegate}`, '_blank');
-                    },
-                    onHover: function(event) {
-                        const target = event.native ? event.native.target : event.target;
-
-                        target.style.cursor = 'pointer';
-                    },
-                    onLeave: function(event) {
-                        const target = event.native ? event.native.target : event.target;
-
-                        target.style.cursor = 'default';
-                    }
                 },
                 title: {
                     display: false,
