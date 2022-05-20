@@ -277,7 +277,7 @@
                             let suffix = '';
                             const datasetIndex = config.data.datasets.length - index - 1
 
-                            if ( ! config.data.datasets[datasetIndex.hidden] && $(window).width() >= 992) {
+                            if ( ! config.data.datasets[datasetIndex].hidden && $(window).width() >= 992) {
                                 suffix = config.data.datasets[datasetIndex].label;
                             }
 
