@@ -274,14 +274,17 @@
                     reverse: true,
                     ticks: {
                         callback: function(value, index) {
-                            let suffix = '';
+                            let text = this.getLabelForValue(value);
                             const datasetIndex = config.data.datasets.length - index - 1
 
-                            if ( ! config.data.datasets[datasetIndex].hidden && $(window).width() >= 992) {
-                                suffix = config.data.datasets[datasetIndex].label;
+                            if (config.data.datasets[datasetIndex]
+                                && ! config.data.datasets[datasetIndex].hidden
+                                && $(window).width() >= 992
+                            ) {
+                                text += ` ${config.data.datasets[datasetIndex].label}`;
                             }
 
-                            return this.getLabelForValue(value) + ` ${suffix}`;
+                            return text;
                         },
                         stepSize: 1,
                         beginAtZero: false,
@@ -449,7 +452,7 @@
                 config.data.labels = caches.small.labels;
             }
 
-            if (caches.small.datasets.length && width >= 768 && width <= 1200) {
+            if (caches.medium.datasets.length && width >= 768 && width <= 1200) {
                 config.data.datasets = caches.medium.datasets;
                 config.data.labels = caches.medium.labels;
             }
