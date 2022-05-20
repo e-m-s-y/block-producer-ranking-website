@@ -245,7 +245,7 @@
                         color: gridColor,
                     },
                     min: 1,
-                    max: 53,
+                    max: 53, // Gets updated when data from API is fetched
                 },
                 y2: {
                     position: 'right',
@@ -259,8 +259,10 @@
                         callback: function(value, index) {
                             let suffix = '';
 
-                            if ( ! config.data.datasets[53 - index - 1].hidden && $(window).width() >= 992) {
-                                suffix = config.data.datasets[53 - index - 1].label;
+                            const datasetIndex = config.data.datasets.length - index - 1
+
+                            if ( ! config.data.datasets[datasetIndex.hidden] && $(window).width() >= 992) {
+                                suffix = config.data.datasets[datasetIndex].label;
                             }
 
                             return this.getLabelForValue(value) + ` ${suffix}`;
@@ -270,11 +272,39 @@
                         color: color,
                     },
                     min: 1,
-                    max: 53,
+                    max: 53, // Gets updated when data from API is fetched
                 }
             }
         }
     };
+</script>
+<script>
+    $("#delegates-filter").on('select2:unselect', function () {
+        var $el = $(this)
+        setTimeout(function () {
+            $('.select2-search__field', $el.closest('.form-row')).focus();
+            $el.select2('open');
+            $('.select2-search__field', $el.closest('.form-row')).val('');
+        }, 0)
+    });
+    $("#delegates-filter").on('select2:select', function () {
+        var $el = $(this);
+        $el.select2('open');
+        setTimeout(function () {
+            $('.select2-search__field', $el.closest('.form-row')).focus();
+        });
+    });
+    $('#delegates-filter').on('change.select2', function () {
+        const selectedDelegates = $(this).val();
+
+        try {
+            localStorage.setItem('selected-delegates', JSON.stringify(selectedDelegates));
+        } catch (error) {}
+
+        applyDelegatesFilter(config.data.datasets);
+
+        chart.update();
+    });
 </script>
 <script>
     let chart;
@@ -375,23 +405,8 @@
 
             config.data.datasets = width < 768 ? caches.small.datasets : caches.default.datasets;
             config.data.labels = width < 768 ? caches.small.labels : caches.default.labels;
-
-            // TODO cleanup
-            $("#delegates-filter").on('select2:unselect', function (event) {
-                var $el = $(this)
-                setTimeout(function () {
-                    $('.select2-search__field', $el.closest('.form-row')).focus();
-                    $el.select2('open');
-                    $('.select2-search__field', $el.closest('.form-row')).val('');
-                }, 0)
-            });
-            $("#delegates-filter").on('select2:select', function (event) {
-                var $el = $(this);
-                $el.select2('open');
-                setTimeout(function () {
-                    $('.select2-search__field', $el.closest('.form-row')).focus();
-                });
-            });
+            config.options.scales.y.max = config.data.datasets.length;
+            config.options.scales.y2.max = config.data.datasets.length;
 
             const filterData = [];
             let selectedDelegates = [];
@@ -413,18 +428,6 @@
                 allowClear: true,
                 data: filterData,
                 closeOnSelect: false,
-            });
-
-            $('#delegates-filter').on('change.select2', function () {
-                const selectedDelegates = $(this).val();
-
-                try {
-                    localStorage.setItem('selected-delegates', JSON.stringify(selectedDelegates));
-                } catch (error) {}
-
-                applyDelegatesFilter(config.data.datasets);
-
-                chart.update();
             });
 
             applyDelegatesFilter(config.data.datasets);
