@@ -151,7 +151,7 @@
             },
             plugins: {
                 legend: {
-                    display: $(window).width() >= 992,
+                    display: $(window).width() >= 1200,
                     align: 'start',
                     position: 'right',
                     maxWidth: 500,
@@ -262,7 +262,7 @@
                         color: gridColor,
                     },
                     min: 1,
-                    max: 53,
+                    max: 53, // Gets updated when data from API is fetched
                 },
                 y2: {
                     position: 'right',
@@ -275,9 +275,10 @@
                     ticks: {
                         callback: function(value, index) {
                             let suffix = '';
+                            const datasetIndex = config.data.datasets.length - index - 1
 
-                            if ( ! config.data.datasets[53 - index - 1].hidden && $(window).width() >= 992) {
-                                suffix = config.data.datasets[53 - index - 1].label;
+                            if ( ! config.data.datasets[datasetIndex.hidden] && $(window).width() >= 992) {
+                                suffix = config.data.datasets[datasetIndex].label;
                             }
 
                             return this.getLabelForValue(value) + ` ${suffix}`;
@@ -287,11 +288,39 @@
                         color: color,
                     },
                     min: 1,
-                    max: 53,
+                    max: 53, // Gets updated when data from API is fetched
                 }
             }
         }
     };
+</script>
+<script>
+    $("#delegates-filter").on('select2:unselect', function () {
+        var $el = $(this)
+        setTimeout(function () {
+            $('.select2-search__field', $el.closest('.form-row')).focus();
+            $el.select2('open');
+            $('.select2-search__field', $el.closest('.form-row')).val('');
+        }, 0)
+    });
+    $("#delegates-filter").on('select2:select', function () {
+        var $el = $(this);
+        $el.select2('open');
+        setTimeout(function () {
+            $('.select2-search__field', $el.closest('.form-row')).focus();
+        });
+    });
+    $('#delegates-filter').on('change.select2', function () {
+        const selectedDelegates = $(this).val();
+
+        try {
+            localStorage.setItem('selected-delegates', JSON.stringify(selectedDelegates));
+        } catch (error) {}
+
+        applyDelegatesFilter(config.data.datasets);
+
+        chart.update();
+    });
 </script>
 <script>
     let chart;
@@ -301,6 +330,10 @@
             datasets: [],
         },
         small: {
+            labels: [],
+            datasets: [],
+        },
+        medium: {
             labels: [],
             datasets: [],
         }
@@ -349,6 +382,10 @@
                 if (caches.small.labels.length !== 5) {
                     caches.small.labels.unshift(round.round);
                 }
+
+                if (caches.medium.labels.length !== 10) {
+                    caches.medium.labels.unshift(round.round);
+                }
             }
 
             const history = new Map();
@@ -378,37 +415,47 @@
                     backgroundColor: color,
                     tension: 0.2
                 });
-                caches.small.datasets.push({
-                    label: delegate,
-                    data: rounds.slice(-5),
-                    fill: false,
-                    borderColor: color,
-                    backgroundColor: color,
-                    tension: 0.2
-                });
+
+                if (response.data.data.length >= 10) {
+                    caches.small.datasets.push({
+                        label: delegate,
+                        data: rounds.slice(-5),
+                        fill: false,
+                        borderColor: color,
+                        backgroundColor: color,
+                        tension: 0.2
+                    });
+                }
+
+                if (response.data.data.length >= 15) {
+                    caches.medium.datasets.push({
+                        label: delegate,
+                        data: rounds.slice(-10),
+                        fill: false,
+                        borderColor: color,
+                        backgroundColor: color,
+                        tension: 0.2
+                    });
+                }
             }
 
             const width = $(window).width();
 
-            config.data.datasets = width < 768 ? caches.small.datasets : caches.default.datasets;
-            config.data.labels = width < 768 ? caches.small.labels : caches.default.labels;
+            config.data.datasets = caches.default.datasets;
+            config.data.labels = caches.default.labels;
 
-            // TODO cleanup
-            $("#delegates-filter").on('select2:unselect', function (event) {
-                var $el = $(this)
-                setTimeout(function () {
-                    $('.select2-search__field', $el.closest('.form-row')).focus();
-                    $el.select2('open');
-                    $('.select2-search__field', $el.closest('.form-row')).val('');
-                }, 0)
-            });
-            $("#delegates-filter").on('select2:select', function (event) {
-                var $el = $(this);
-                $el.select2('open');
-                setTimeout(function () {
-                    $('.select2-search__field', $el.closest('.form-row')).focus();
-                });
-            });
+            if (caches.small.datasets.length && width < 768) {
+                config.data.datasets = caches.small.datasets;
+                config.data.labels = caches.small.labels;
+            }
+
+            if (caches.small.datasets.length && width >= 768 && width <= 1200) {
+                config.data.datasets = caches.medium.datasets;
+                config.data.labels = caches.medium.labels;
+            }
+
+            config.options.scales.y.max = config.data.datasets.length;
+            config.options.scales.y2.max = config.data.datasets.length;
 
             const filterData = [];
             let selectedDelegates = [];
@@ -430,18 +477,6 @@
                 allowClear: true,
                 data: filterData,
                 closeOnSelect: false,
-            });
-
-            $('#delegates-filter').on('change.select2', function () {
-                const selectedDelegates = $(this).val();
-
-                try {
-                    localStorage.setItem('selected-delegates', JSON.stringify(selectedDelegates));
-                } catch (error) {}
-
-                applyDelegatesFilter(config.data.datasets);
-
-                chart.update();
             });
 
             applyDelegatesFilter(config.data.datasets);
@@ -489,12 +524,29 @@
                 chart.update();
             }
 
-            if (width < 768 && chart.config.data.labels.length !== caches.small.labels.length) {
+            if (
+                width < 768
+                && caches.small.datasets.length
+                && chart.config.data.labels.length !== caches.small.labels.length
+            ) {
                 chart.config.data.datasets = applyDelegatesFilter(caches.small.datasets);
                 chart.config.data.labels = caches.small.labels;
 
                 chart.update();
-            } else if(width > 768 && chart.config.data.labels.length !== caches.default.labels.length) {
+            } else if(
+                width > 768 && width < 1200
+                && caches.medium.datasets.length
+                && chart.config.data.labels.length !== caches.medium.labels.length
+            ) {
+                chart.config.data.datasets = applyDelegatesFilter(caches.medium.datasets);
+                chart.config.data.labels = caches.medium.labels;
+
+                chart.update();
+            } else if(
+                width > 1200
+                && caches.default.datasets.length
+                && chart.config.data.labels.length !== caches.default.labels.length
+            ) {
                 chart.config.data.datasets = applyDelegatesFilter(caches.default.datasets);
                 chart.config.data.labels = caches.default.labels;
 
