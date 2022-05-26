@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" content="text/html">
-    <title>Helios delegate ranking</title>
+    <title>ARK delegate ranking</title>
     <meta name="emsy" content="author">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
     <link href="/css/bootstrap.min.css" rel="stylesheet">
@@ -52,7 +52,7 @@
         </div>
         <div id="chart" class="row p-2 justify-content-center d-none">
             <div class="col-12 pt-3">
-                <h3 class="text-center text-light">Helios delegate ranking</h3>
+                <h3 class="text-center text-light">ARK delegate ranking</h3>
                 <p id="countdown" class="text-center text-light m-0">Refreshing automatically in 64 seconds...</p>
             </div>
             <div class="d-flex row justify-content-center p-1">
@@ -117,6 +117,8 @@
 <script>
     let color = 'white';
     let gridColor = 'rgb(255, 255, 255, 0.5)';
+    const defaultBorderWidth = 2.5;
+    const highlightBorderWidth = 7;
 
     try {
         if (localStorage.getItem('lightmode') === "true") {
@@ -156,6 +158,8 @@
                     position: 'right',
                     maxWidth: 500,
                     labels: {
+                        boxWidth: 12,
+                        boxHeight: 12,
                         color: color,
                     },
                     onClick:  function (e) {
@@ -167,6 +171,9 @@
                     text: 'Delegate rank history'
                 },
                 tooltip: {
+                    boxWidth: 6,
+                    boxHeight: 6,
+                    boxPadding: 3,
                     callbacks: {
                         label: function(tooltipItem) {
                             const label = tooltipItem.dataset.label || '';
@@ -245,7 +252,7 @@
                         color: gridColor,
                     },
                     min: 1,
-                    max: 53, // Gets updated when data from API is fetched
+                    max: 51,
                 },
                 y2: {
                     position: 'right',
@@ -256,7 +263,7 @@
                     },
                     reverse: true,
                     ticks: {
-                        callback: function(value, index) {
+                        callback: function (value, index) {
                             let text = '';
                             const datasetIndex = config.data.datasets.length - index - 1
 
@@ -274,9 +281,64 @@
                         color: color,
                     },
                     min: 1,
-                    max: 53, // Gets updated when data from API is fetched
+                    max: 51,
+                },
+            },
+            onClick: (e) => {
+                const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                // const alpha = '4D'; // 30%
+                const alpha = '40'; // 25%
+                // const alpha = '33'; // 20%
+                // const alpha = '1A'; // 10%
+
+                if (points.length) {
+                    const point = points[0];
+
+                    if (chart.config.data.datasets[point.datasetIndex].borderWidth === defaultBorderWidth) {
+                        for (const index in chart.config.data.datasets) {
+                            if (index == point.datasetIndex) {
+                                continue;
+                            }
+
+                            if (chart.config.data.datasets[index]) {
+                                const dataset = chart.config.data.datasets[index];
+
+                                if (dataset.backgroundColor.length === 7) {
+                                    dataset.borderColor += alpha;
+                                    dataset.backgroundColor += alpha;
+                                }
+
+                                dataset.borderWidth = defaultBorderWidth;
+                            }
+                        }
+
+                        chart.config.data.datasets[point.datasetIndex].borderWidth = highlightBorderWidth;
+
+                        if (chart.config.data.datasets[point.datasetIndex].backgroundColor.length === 9) {
+                            chart.config.data.datasets[point.datasetIndex].borderColor = chart.config.data.datasets[point.datasetIndex].borderColor.slice(0, -2);
+                            chart.config.data.datasets[point.datasetIndex].backgroundColor = chart.config.data.datasets[point.datasetIndex].backgroundColor.slice(0, -2);
+                        }
+
+                        chart.update();
+
+                        return;
+                    }
+
+                    if (chart.config.data.datasets[point.datasetIndex].borderWidth === highlightBorderWidth) {
+                        for (const dataset of chart.config.data.datasets) {
+                            if (dataset.backgroundColor.length === 9) {
+                                dataset.borderColor = dataset.borderColor.slice(0, -2);
+                                dataset.backgroundColor = dataset.backgroundColor.slice(0, -2);
+                            }
+
+                            dataset.borderWidth = defaultBorderWidth;
+                        }
+
+                        chart.update();
+                    }
                 }
             }
+
         }
     };
 </script>
@@ -399,6 +461,7 @@
                     fill: false,
                     borderColor: color,
                     backgroundColor: color,
+                    borderWidth: defaultBorderWidth,
                     tension: 0.2
                 });
 
@@ -409,6 +472,7 @@
                         fill: false,
                         borderColor: color,
                         backgroundColor: color,
+                        borderWidth: defaultBorderWidth,
                         tension: 0.2
                     });
                 }
@@ -420,6 +484,7 @@
                         fill: false,
                         borderColor: color,
                         backgroundColor: color,
+                        borderWidth: defaultBorderWidth,
                         tension: 0.2
                     });
                 }
