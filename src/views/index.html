@@ -161,9 +161,26 @@
                         boxWidth: 12,
                         boxHeight: 12,
                         color: color,
+                        filter: function(legendItem) {
+                            legendItem.text += ' ↗';
+
+                            return legendItem;
+                        },
                     },
-                    onClick:  function (e) {
-                        e.stopPropagation();
+                    onClick:  function (event, legendItem) {
+                        const delegate = config.data.datasets[legendItem.datasetIndex].label;
+
+                        window.open(`https://arkdelegates.live/delegate/${delegate}`, '_blank');
+                    },
+                    onHover: function(event) {
+                        const target = event.native ? event.native.target : event.target;
+
+                        target.style.cursor = 'pointer';
+                    },
+                    onLeave: function(event) {
+                        const target = event.native ? event.native.target : event.target;
+
+                        target.style.cursor = 'default';
                     }
                 },
                 title: {
