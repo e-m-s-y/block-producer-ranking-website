@@ -194,11 +194,22 @@
                     callbacks: {
                         label: function(tooltipItem) {
                             const label = tooltipItem.dataset.label || '';
-                            const previousTooltipItem = config.data.datasets[tooltipItem.datasetIndex].data[tooltipItem.dataIndex - 1] || undefined;
+                            const previousDataset = config.data.datasets[tooltipItem.datasetIndex] || undefined;
+
+                            if (previousDataset === undefined) {
+                                return;
+                            }
+
+                            const previousTooltipItem = previousDataset.data[tooltipItem.dataIndex - 1] || undefined;
                             let votes = tooltipItem.raw.votes;
                             let rank = tooltipItem.raw.y;
 
-                            if (previousTooltipItem !== undefined) {
+                            if (
+                                previousTooltipItem !== undefined
+                                && previousTooltipItem.x
+                                && previousTooltipItem.y
+                                && previousTooltipItem.votes
+                            ) {
                                 const differenceInRanks = tooltipItem.raw.y - previousTooltipItem.y;
 
                                 if (differenceInRanks !== 0) {
@@ -281,8 +292,8 @@
                     reverse: true,
                     ticks: {
                         callback: function (value, index) {
-                            let text = '';
-                            const datasetIndex = config.data.datasets.length - index - 1
+                            let text = this.getLabelForValue(value);
+                            const datasetIndex = parseInt(text) - 1;
 
                             if (config.data.datasets[datasetIndex]
                                 && ! config.data.datasets[datasetIndex].hidden
@@ -453,24 +464,37 @@
                 }
             }
 
+            // Create empty datasets for each delegate.
+            let emptyDataset = new Map();
+
+            for (const round of response.data.data) {
+                emptyDataset.set(round.round, {x: null, y: null, votes: null});
+            }
+
             const history = new Map();
 
             for (const round of response.data.data) {
                 for (const delegate of round.delegates) {
-                    const rounds = history.get(delegate.username) || [];
-
-                    rounds.unshift({
-                        x: parseInt(round.round),
-                        y: delegate.rank,
-                        votes: parseInt(delegate.votes.slice(0, delegate.votes.length - 8))
-                    });
-
-                    history.set(delegate.username, rounds);
+                    // Create new dataset reference.
+                    history.set(delegate.username, new Map(emptyDataset));
                 }
             }
 
-            for (const [delegate, rounds] of history) {
+            for (const round of response.data.data) {
+                for (const delegate of round.delegates) {
+                    const dataset = history.get(delegate.username);
+
+                    dataset.set(round.round, {
+                        x: round.round,
+                        y: delegate.rank,
+                        votes: parseInt(delegate.votes.slice(0, delegate.votes.length - 8))
+                    });
+                }
+            }
+
+            for (let [delegate, rounds] of history) {
                 const color = colors[Math.floor(Math.random() * colors.length)];
+                rounds = [...rounds.values()].reverse();
 
                 caches.default.datasets.push({
                     label: delegate,
@@ -479,7 +503,7 @@
                     borderColor: color,
                     backgroundColor: color,
                     borderWidth: defaultBorderWidth,
-                    tension: 0.2
+                    tension: 0.2,
                 });
 
                 if (response.data.data.length >= 10) {
@@ -490,7 +514,7 @@
                         borderColor: color,
                         backgroundColor: color,
                         borderWidth: defaultBorderWidth,
-                        tension: 0.2
+                        tension: 0.2,
                     });
                 }
 
@@ -502,7 +526,7 @@
                         borderColor: color,
                         backgroundColor: color,
                         borderWidth: defaultBorderWidth,
-                        tension: 0.2
+                        tension: 0.2,
                     });
                 }
             }
@@ -521,9 +545,6 @@
                 config.data.datasets = caches.medium.datasets;
                 config.data.labels = caches.medium.labels;
             }
-
-            config.options.scales.y.max = config.data.datasets.length;
-            config.options.scales.y2.max = config.data.datasets.length;
 
             const filterData = [];
             let selectedDelegates = [];
