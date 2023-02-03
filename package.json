@@ -1,6 +1,6 @@
 {
-    "name": "@foly/delegate-ranking-website",
-    "version": "1.0.7",
+    "name": "@emsy/block-producer-ranking-website",
+    "version": "1.0.8",
     "description": "Implementation of the core-api-extension core plugin.",
     "author": "emsy",
     "license": "MIT",

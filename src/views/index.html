@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" content="text/html">
-    <title>Solar delegate ranking</title>
+    <title>Solar block producer ranking</title>
     <meta name="emsy" content="author">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
     <link href="/css/bootstrap.min.css" rel="stylesheet">
@@ -52,7 +52,7 @@
         </div>
         <div id="chart" class="row p-2 justify-content-center d-none">
             <div class="col-12 pt-3">
-                <h3 class="text-center text-light">Solar delegate ranking</h3>
+                <h3 class="text-center text-light">Solar block producer ranking</h3>
                 <p id="countdown" class="text-center text-light m-0">Refreshing automatically in 64 seconds...</p>
             </div>
             <div class="d-flex row justify-content-center p-1">
@@ -64,7 +64,7 @@
                 </div>
                 <div class="col-12 col-xl-8 col-xxl-6 pb-2">
                     <label class="col-12">
-                        <select id="delegates-filter" multiple style="width: 100%">
+                        <select id="block-producers-filter" multiple style="width: 100%">
                         </select>
                     </label>
                 </div>
@@ -168,9 +168,9 @@
                         color: color,
                     },
                     onClick: function (event, legendItem) {
-                        const delegate = config.data.datasets[legendItem.datasetIndex].label;
+                        const blockProducer = config.data.datasets[legendItem.datasetIndex].label;
 
-                        window.open(`https://delegates.solar.org/delegates/${delegate}`, '_blank');
+                        window.open(`https://delegates.solar.org/delegates/${blockProducer}`, '_blank');
                     },
                     onHover: function(event) {
                         const target = event.native ? event.native.target : event.target;
@@ -185,7 +185,7 @@
                 },
                 title: {
                     display: false,
-                    text: 'Delegate rank history'
+                    text: 'Block producer rank history'
                 },
                 tooltip: {
                     boxWidth: 6,
@@ -370,7 +370,7 @@
     };
 </script>
 <script>
-    $("#delegates-filter").on('select2:unselect', function () {
+    $("#block-producers-filter").on('select2:unselect', function () {
         var $el = $(this)
         setTimeout(function () {
             $('.select2-search__field', $el.closest('.form-row')).focus();
@@ -378,21 +378,21 @@
             $('.select2-search__field', $el.closest('.form-row')).val('');
         }, 0)
     });
-    $("#delegates-filter").on('select2:select', function () {
+    $("#block-producers-filter").on('select2:select', function () {
         var $el = $(this);
         $el.select2('open');
         setTimeout(function () {
             $('.select2-search__field', $el.closest('.form-row')).focus();
         });
     });
-    $('#delegates-filter').on('change.select2', function () {
-        const selectedDelegates = $(this).val();
+    $('#block-producers-filter').on('change.select2', function () {
+        const selectedBlockProducers = $(this).val();
 
         try {
-            localStorage.setItem('selected-delegates', JSON.stringify(selectedDelegates));
+            localStorage.setItem('selected-block-producers', JSON.stringify(selectedBlockProducers));
         } catch (error) {}
 
-        applyDelegatesFilter(config.data.datasets);
+        applyBlockProducersFilter(config.data.datasets);
 
         chart.update();
     });
@@ -435,21 +435,21 @@
         '#607D8B',
     ];
 
-    const applyDelegatesFilter = function(datasets) {
-        let selectedDelegates = [];
+    const applyBlockProducersFilter = function(datasets) {
+        let selectedBlockProducers = [];
 
         try {
-            selectedDelegates = JSON.parse(localStorage.getItem('selected-delegates')) || [];
+            selectedBlockProducers = JSON.parse(localStorage.getItem('selected-block-producers')) || [];
         } catch (error) {}
 
         for (const dataset of datasets) {
-            dataset.hidden = !selectedDelegates.includes(dataset.label) && selectedDelegates.length;
+            dataset.hidden = !selectedBlockProducers.includes(dataset.label) && selectedBlockProducers.length;
         }
 
         return datasets;
     }
 
-    axios.get('/api/delegates/ranking')
+    axios.get('/api/block-producer/ranking')
         .then(function (response) {
             for (const round of response.data.data) {
                 caches.default.labels.unshift(round.round);
@@ -463,7 +463,7 @@
                 }
             }
 
-            // Create empty datasets for each delegate.
+            // Create empty datasets for each block producer.
             let emptyDataset = new Map();
 
             for (const round of response.data.data) {
@@ -473,30 +473,30 @@
             const history = new Map();
 
             for (const round of response.data.data) {
-                for (const delegate of round.delegates) {
+                for (const blockProducer of round.delegates) {
                     // Create new dataset reference.
-                    history.set(delegate.username, new Map(emptyDataset));
+                    history.set(blockProducer.username, new Map(emptyDataset));
                 }
             }
 
             for (const round of response.data.data) {
-                for (const delegate of round.delegates) {
-                    const dataset = history.get(delegate.username);
+                for (const blockProducer of round.delegates) {
+                    const dataset = history.get(blockProducer.username);
 
                     dataset.set(round.round, {
                         x: round.round,
-                        y: delegate.rank,
-                        votes: parseInt(delegate.votes.slice(0, delegate.votes.length - 8))
+                        y: blockProducer.rank,
+                        votes: parseInt(blockProducer.votes.slice(0, blockProducer.votes.length - 8))
                     });
                 }
             }
 
-            for (let [delegate, rounds] of history) {
+            for (let [blockProducer, rounds] of history) {
                 const color = colors[Math.floor(Math.random() * colors.length)];
                 rounds = [...rounds.values()].reverse();
 
                 caches.default.datasets.push({
-                    label: delegate,
+                    label: blockProducer,
                     data: rounds,
                     fill: false,
                     borderColor: color,
@@ -507,7 +507,7 @@
 
                 if (response.data.data.length >= 10) {
                     caches.small.datasets.push({
-                        label: delegate,
+                        label: blockProducer,
                         data: rounds.slice(-5),
                         fill: false,
                         borderColor: color,
@@ -519,7 +519,7 @@
 
                 if (response.data.data.length >= 15) {
                     caches.medium.datasets.push({
-                        label: delegate,
+                        label: blockProducer,
                         data: rounds.slice(-10),
                         fill: false,
                         borderColor: color,
@@ -546,28 +546,28 @@
             }
 
             const filterData = [];
-            let selectedDelegates = [];
+            let selectedBlockProducers = [];
 
             try {
-                selectedDelegates = JSON.parse(localStorage.getItem('selected-delegates')) || [];
+                selectedBlockProducers = JSON.parse(localStorage.getItem('selected-block-producers')) || [];
             } catch (error) {}
 
             for (const dataset of config.data.datasets) {
                 filterData.push({
                     id: dataset.label,
                     text: dataset.label,
-                    selected: selectedDelegates.includes(dataset.label),
+                    selected: selectedBlockProducers.includes(dataset.label),
                 });
             }
 
-            $('#delegates-filter').select2({
-                placeholder: "Filter delegate(s)",
+            $('#block-producers-filter').select2({
+                placeholder: "Filter block producers(s)",
                 allowClear: true,
                 data: filterData,
                 closeOnSelect: false,
             });
 
-            applyDelegatesFilter(config.data.datasets);
+            applyBlockProducersFilter(config.data.datasets);
 
             chart = new Chart(document.getElementById('canvas'), config);
 
@@ -617,7 +617,7 @@
                 && caches.small.datasets.length
                 && chart.config.data.labels.length !== caches.small.labels.length
             ) {
-                chart.config.data.datasets = applyDelegatesFilter(caches.small.datasets);
+                chart.config.data.datasets = applyBlockProducersFilter(caches.small.datasets);
                 chart.config.data.labels = caches.small.labels;
 
                 chart.update();
@@ -626,7 +626,7 @@
                 && caches.medium.datasets.length
                 && chart.config.data.labels.length !== caches.medium.labels.length
             ) {
-                chart.config.data.datasets = applyDelegatesFilter(caches.medium.datasets);
+                chart.config.data.datasets = applyBlockProducersFilter(caches.medium.datasets);
                 chart.config.data.labels = caches.medium.labels;
 
                 chart.update();
@@ -635,7 +635,7 @@
                 && caches.default.datasets.length
                 && chart.config.data.labels.length !== caches.default.labels.length
             ) {
-                chart.config.data.datasets = applyDelegatesFilter(caches.default.datasets);
+                chart.config.data.datasets = applyBlockProducersFilter(caches.default.datasets);
                 chart.config.data.labels = caches.default.labels;
 
                 chart.update();

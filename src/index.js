@@ -8,14 +8,14 @@ dotenv.config();
 
 app.use(express.static('./public'));
 app.use('/favicon.ico', express.static('public/img/favicon.png'));
-app.get('/api/delegates/ranking', async (req, res) => {
-    const response = await axios.get(process.env.DELEGATE_RANKING_ENDPOINT);
+app.get('/api/block-producer/ranking', async (req, res) => {
+    const response = await axios.get(process.env.BLOCK_PRODUCER_RANKING_ENDPOINT);
 
     if (response.status === 200) {
         return res.send(response.data);
     }
 
-    res.status(500).send("Could not get delegate ranking from relay.");
+    res.status(500).send("Could not get block producer ranking from relay.");
 });
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, '/views/index.html'));
